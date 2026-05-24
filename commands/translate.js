@@ -37,7 +37,7 @@ async function handleTranslateCommand(sock, chatId, message, match) {
 
         if (!textToTranslate) {
             return sock.sendMessage(chatId, {
-                text: '❌ *Translate ke liye text nahi mila!*\n_Text do ya kisi message ko reply karo._',
+                text: '❌ *No text found to translate!*\n_Provide text or reply to a message._',
                 quoted: message
             });
         }
@@ -103,7 +103,7 @@ async function handleTranslateCommand(sock, chatId, message, match) {
     } catch (error) {
         console.error('❌ Error in translate command:', error);
         await sock.sendMessage(chatId, {
-            text: '❌ *Translation failed!*\n_Language code check karo aur dobara try karo._',
+            text: '❌ *Translation failed!*\n_Check the language code and try again._',
             quoted: message
         });
     }

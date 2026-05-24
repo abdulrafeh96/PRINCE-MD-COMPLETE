@@ -136,7 +136,7 @@ module.exports = async function pinterestCommand(sock, chatId, message) {
     if (!input) {
         await sock.sendMessage(chatId, {
             text:
-`❌ *${toSmallCaps('pinterest query ya link do')}*
+`❌ *${toSmallCaps('please provide a pinterest query or link')}*
 
 ${toSmallCaps('examples')}:
 .pin aesthetic

@@ -40,7 +40,7 @@ async function deleteCommand(sock, chatId, message, senderId) {
         // If no number provided and not replying/mentioning, show usage message
         else if (countArg === null && !repliedParticipant && !mentioned) {
             await sock.sendMessage(chatId, { 
-                text: '❌ *Delete count do!*\n\nUsage:\n• `.del 5`\n• `.del 3 @user`\n• `.del 2` reply par' 
+                text: '❌ *Please provide a delete count!*\n\nUsage:\n• `.del 5`\n• `.del 3 @user`\n• `.del 2` on a reply' 
             }, { quoted: message });
             return;
         }

@@ -202,7 +202,7 @@ async function handleChannelDetection(sock, chatId, message, senderId) {
 `${ICON.stop} *${style.toSmallCaps('antichannel kick')}*
 
 ${ICON.user} ${mention(senderId)}
-${ICON.stop} ${style.toSmallCaps('channel content bhejne par remove kar diya gaya')}`,
+${ICON.stop} ${style.toSmallCaps('removed for sending channel content')}`,
                 mentions: [senderId]
             }, { quoted: message });
             return;
@@ -218,7 +218,7 @@ ${ICON.stop} ${style.toSmallCaps('channel content bhejne par remove kar diya gay
 
 ${ICON.user} ${mention(senderId)}
 ${ICON.warn} ${style.toSmallCaps(`warning limit ${WARN_COUNT}/${WARN_COUNT} complete`)}
-${ICON.stop} ${style.toSmallCaps('channel content bhejne par remove kar diya gaya')}`,
+${ICON.stop} ${style.toSmallCaps('removed for sending channel content')}`,
                     mentions: [senderId]
                 }, { quoted: message });
                 return;

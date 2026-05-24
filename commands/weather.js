@@ -6,7 +6,7 @@ async function weatherCommand(sock, chatId, message, city) {
 
     if (!query) {
         await sock.sendMessage(chatId, {
-            text: '❌ *City name do!*\nUsage: `.weather Karachi`'
+            text: '❌ *Please provide a city name!*\nUsage: `.weather Karachi`'
         }, { quoted: message });
         return;
     }
@@ -41,7 +41,7 @@ async function weatherCommand(sock, chatId, message, city) {
         await sock.sendMessage(chatId, { text }, { quoted: message });
     } catch (err) {
         await sock.sendMessage(chatId, {
-            text: '❌ *Weather fetch failed!*\n_City name check karo aur dobara try karo._'
+            text: '❌ *Weather fetch failed!*\n_Check the city name and try again._'
         }, { quoted: message });
     }
 }

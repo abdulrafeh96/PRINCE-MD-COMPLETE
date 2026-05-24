@@ -278,7 +278,7 @@ function buildNotFoundText(query) {
         '│ ❌ *کلام نہیں ملا*',
         '╰────────────────',
         '',
-        `_${query}_ کے لیے saved ghazal/nazm nahi mili.`,
+        `No saved ghazal/nazm found for _${query}_.`,
         '',
         '*Examples:*',
         '.poetry iqbal',

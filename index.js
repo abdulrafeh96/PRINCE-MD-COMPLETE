@@ -145,7 +145,7 @@ function toBotSmallCaps(text = "") {
 
     const placeholders = []
     const protectedText = String(text || "").replace(/https?:\/\/\S+|chat\.whatsapp\.com\/\S+/gi, (match) => {
-        const token = `__URL_${placeholders.length}__`
+        const token = `\u0000${placeholders.length}\u0000`
         placeholders.push(match)
         return token
     })
@@ -155,7 +155,7 @@ function toBotSmallCaps(text = "") {
         .map((char) => map[char.toLowerCase()] || char)
         .join("")
 
-    return placeholders.reduce((output, value, index) => output.replace(`__URL_${index}__`, value), converted)
+    return placeholders.reduce((output, value, index) => output.replace(`\u0000${index}\u0000`, value), converted)
 }
 
 function shouldEddyWrap(text = "") {
@@ -223,7 +223,7 @@ function buildMoreFilesHints(moreSubjects = [], termType) {
 
     return [
         "",
-        "More files chahiye hon to ye command bhejo:",
+        "Need more files? Send this command:",
         ...moreSubjects.map((subject) => `➡️ ${buildMoreFilesCommand(termType, subject)}`)
     ]
 }
@@ -262,8 +262,8 @@ function buildDeliveryReport({ type, subject, totalSent, moreSubjects = [], term
         `📚  Subject: *${subject}*`,
         `📦  Total Sent: *${totalSent}*`,
         "",
-        "Files pohanch gayi ne, paaji.",
-        "Check kar lo, sab ready hai.",
+        "Your files have been delivered.",
+        "Please check them; everything is ready.",
         ...buildMoreFilesHints(moreSubjects, termType),
         "",
         "╰────────────────",
@@ -279,8 +279,8 @@ function buildFileStatusReport({ type, subject }) {
         `📂  Type: *${type}*`,
         `📚  Subject: *${subject}*`,
         "",
-        "File abhi Drive mein upload nahi hui.",
-        "Jaldi add ho jaye gi, thora sabar karo.",
+        "This file has not been uploaded to Drive yet.",
+        "It will be added soon. Please wait a little.",
         "",
         "╰────────────────",
         buildSupportFooter()
@@ -295,8 +295,8 @@ function buildHandoutsReport({ subject, totalSent }) {
         `📘  Subject: *${subject}*`,
         `📦  Handouts Sent: *${totalSent}*`,
         "",
-        "Handouts pohanch gaye ne, paaji.",
-        "Parhai shuru karo, scene set hai.",
+        "Your handouts have been delivered.",
+        "You can start studying now.",
         "",
         "╰────────────────",
         buildSupportFooter()
@@ -311,8 +311,8 @@ function buildNoMoreFilesReport({ type, subject }) {
         `📂  Type: *${type}*`,
         `📚  Subject: *${subject}*`,
         "",
-        "Is subject ki aur files available nahi hain.",
-        "Jo files thi woh send ho chuki hain.",
+        "No more files are available for this subject.",
+        "All available files have already been sent.",
         "",
         "╰────────────────",
         buildSupportFooter()
@@ -323,7 +323,7 @@ function buildMoreFilesNeedDetailsReport() {
     return [
         "╭─〔 *MORE FILES* 〕",
         "",
-        "Command mein term aur subject bhi likho.",
+        "Please include the term and subject in the command.",
         "",
         `Example: *${buildMoreFilesCommand("mid", "CS101")}*`,
         `Example: *${buildMoreFilesCommand("final", "CS101")}*`,
@@ -340,8 +340,8 @@ function buildHandoutsStatusReport({ subject }) {
         "⛔  Status: *Not Available*",
         `📘  Subject: *${subject}*`,
         "",
-        "Handouts abhi Drive mein upload nahi hue.",
-        "Jaldi add ho jaye ge, thora sabar karo.",
+        "These handouts have not been uploaded to Drive yet.",
+        "They will be added soon. Please wait a little.",
         "",
         "╰────────────────",
         buildSupportFooter()

@@ -16,7 +16,7 @@ async function videoCommand(sock, chatId, message) {
     const query = getArgs(message);
     if (!query) {
         await sock.sendMessage(chatId, {
-            text: '❌ *Video name ya YouTube link do!*\n\nUsage: `.video funny cats`'
+            text: '❌ *Please provide a video name or YouTube link!*\n\nUsage: `.video funny cats`'
         }, { quoted: message });
         return;
     }
@@ -52,7 +52,7 @@ async function videoCommand(sock, chatId, message) {
     } catch (err) {
         await react(sock, message, '❌');
         await sock.sendMessage(chatId, {
-            text: `❌ *Video download failed!*\n_${err.message || 'Different link/name se try karo.'}_`
+            text: `❌ *Video download failed!*\n_${err.message || 'Try a different link or name.'}_`
         }, { quoted: message });
     }
 }

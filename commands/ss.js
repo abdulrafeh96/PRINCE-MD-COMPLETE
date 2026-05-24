@@ -20,7 +20,7 @@ async function handleSsCommand(sock, chatId, message, match) {
         // Validate URL
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
             return sock.sendMessage(chatId, {
-                text: '❌ *Valid URL do!*\n_Url http:// ya https:// se start hona chahiye._',
+                text: '❌ *Please provide a valid URL!*\n_The URL must start with http:// or https://._',
                 quoted: message
             });
         }
@@ -46,7 +46,7 @@ async function handleSsCommand(sock, chatId, message, match) {
     } catch (error) {
         console.error('❌ Error in ss command:', error);
         await sock.sendMessage(chatId, {
-            text: '❌ *Screenshot failed!*\n_URL check karo ya thori dair baad try karo._',
+            text: '❌ *Screenshot failed!*\n_Check the URL or try again later._',
             quoted: message
         });
     }

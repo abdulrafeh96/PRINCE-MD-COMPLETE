@@ -150,7 +150,7 @@ async function handleStickerDetection(sock, chatId, message, senderId) {
                     `${ICON.stop} *${style.toSmallCaps('antisticker kick')}*`,
                     '',
                     `${ICON.user} ${mention(senderId)}`,
-                    `${ICON.stop} ${style.toSmallCaps('sticker bhejne par remove kar diya gaya')}`
+                    `${ICON.stop} ${style.toSmallCaps('removed for sending a sticker')}`
                 ]),
                 mentions: [senderId]
             }, { quoted: message });
@@ -168,7 +168,7 @@ async function handleStickerDetection(sock, chatId, message, senderId) {
                         '',
                         `${ICON.user} ${mention(senderId)}`,
                         `${ICON.warn} ${style.toSmallCaps(`warning limit ${WARN_COUNT}/${WARN_COUNT} complete`)}`,
-                        `${ICON.stop} ${style.toSmallCaps('sticker bhejne par remove kar diya gaya')}`
+                        `${ICON.stop} ${style.toSmallCaps('removed for sending a sticker')}`
                     ]),
                     mentions: [senderId]
                 }, { quoted: message });
@@ -180,7 +180,7 @@ async function handleStickerDetection(sock, chatId, message, senderId) {
                     `${ICON.warn} *${style.toSmallCaps('antisticker warning')}*`,
                     '',
                     `${ICON.user} ${mention(senderId)}`,
-                    `${ICON.stop} ${style.toSmallCaps('stickers allowed nahi hain')}`,
+                    `${ICON.stop} ${style.toSmallCaps('stickers are not allowed')}`,
                     `${ICON.warn} *${style.toSmallCaps('warnings')}:* ${warningCount}/${WARN_COUNT}`
                 ]),
                 mentions: [senderId]

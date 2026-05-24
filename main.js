@@ -185,7 +185,7 @@ function mentionedOrNumber(message, rawText) {
 
 async function sendUnavailable(sock, chatId, message, command) {
     await sock.sendMessage(chatId, {
-        text: `⚙️ *${command}*\n\n${style.toSmallCaps('feature abhi configure nahi hai')}\n${style.toSmallCaps('api/module connect karne ke baad ye live ho jayegi')}`,
+        text: `⚙️ *${command}*\n\n${style.toSmallCaps('this feature is not configured yet')}\n${style.toSmallCaps('it will work after the api/module is connected')}`,
         ...channelInfo
     }, { quoted: message });
 }
@@ -486,12 +486,20 @@ async function handleMessages(sock, messageUpdate, printLog) {
             }
             return;
         }
-        // In private mode, only owner/sudo can run commands
+        const commandName = userMessage.slice(1).split(/\s+/)[0];
+
+        // List of admin commands
+        const adminCommands = ['.mute', '.unmute', '.ban', '.unban', '.promote', '.demote', '.kick', '.add', '.tag', '.tagall', '.tagnotadmin', '.hidetag', '.delete', '.del', '.welcome', '.antibadword', '.chatbot', '.antilink', '.antitag', '.antisticker', '.antichannel', '.antigroup', '.antispam', '.autoopen', '.autoclose', '.autostatus', '.antikeyword', '.antiword', '.antiwords', '.schedule', '.setgdesc', '.setgname', '.setgpp', '.setdesc', '.setname', '.setppgc', '.linkgc', '.revokegc', '.resetlink', '.revoke', '.resetwarn', '.lockchat', '.unlockchat', '.lockedusers', '.groupstatus', '.setcmd', '.getcmd', '.delcmd'];
+        const isAdminCommand = adminCommands.some(cmd => userMessage === cmd || userMessage.startsWith(`${cmd} `));
+
+        // In private mode, group admins can still run admin commands in groups.
         if (!isPublic && !isOwnerOrSudoCheck) {
-            return;
+            if (!isGroup || !isAdminCommand) return;
+
+            const adminStatus = await isAdmin(sock, chatId, senderId);
+            if (!adminStatus.isSenderAdmin) return;
         }
 
-        const commandName = userMessage.slice(1).split(/\s+/)[0];
         if (disabledCommands.has(commandName)) {
             await sock.sendMessage(chatId, {
                 text: stableNotice,
@@ -499,10 +507,6 @@ async function handleMessages(sock, messageUpdate, printLog) {
             }, { quoted: message });
             return;
         }
-
-        // List of admin commands
-        const adminCommands = ['.mute', '.unmute', '.ban', '.unban', '.promote', '.demote', '.kick', '.add', '.tagall', '.tagnotadmin', '.hidetag', '.antilink', '.antitag', '.antisticker', '.antichannel', '.antigroup', '.antispam', '.autoopen', '.autoclose', '.autostatus', '.antikeyword', '.antiword', '.antiwords', '.schedule', '.setgdesc', '.setgname', '.setgpp', '.setdesc', '.setname', '.setppgc', '.linkgc', '.revokegc', '.resetwarn', '.lockchat', '.unlockchat', '.lockedusers', '.groupstatus', '.setcmd', '.getcmd', '.delcmd'];
-        const isAdminCommand = adminCommands.some(cmd => userMessage === cmd || userMessage.startsWith(`${cmd} `));
 
         // List of owner commands
         const ownerCommands = ['.mode', '.antidelete', '.cleartmp', '.setpp', '.clearsession', '.areact', '.autoreact', '.autotyping', '.autoread', '.pmblocker', '.addowner', '.removeowner', '.broadcast', '.bc', '.restart', '.afk', '.pnotify', '.dnotify', '.restrict', '.unrestrict', '.siminfo', '.cnicinfo', '.gen'];
@@ -522,21 +526,12 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 return;
             }
 
-            if (
-                userMessage.startsWith('.mute') ||
-                userMessage === '.unmute' ||
-                userMessage.startsWith('.ban') ||
-                userMessage.startsWith('.unban') ||
-                userMessage.startsWith('.promote') ||
-                userMessage.startsWith('.demote')
-            ) {
-                if (!isSenderAdmin && !message.key.fromMe) {
-                    await sock.sendMessage(chatId, {
-                        text: style.fail('sorry, only group admins can use this command'),
-                        ...channelInfo
-                    }, { quoted: message });
-                    return;
-                }
+            if (!isSenderAdmin && !message.key.fromMe) {
+                await sock.sendMessage(chatId, {
+                    text: style.fail('sorry, only group admins can use this command'),
+                    ...channelInfo
+                }, { quoted: message });
+                return;
             }
         }
 
@@ -613,7 +608,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 commandExecuted = true;
                 break;
             case userMessage === '.stickerinfo':
-                await eddyCompat.unavailable(sock, chatId, message, '.stickerinfo', 'Sticker info command recognize ho gayi hai. Current sticker module me metadata reader available nahi hai.');
+                await eddyCompat.unavailable(sock, chatId, message, '.stickerinfo', 'Sticker info command is recognized, but the current sticker module does not include a metadata reader.');
                 break;
             case userMessage.startsWith('.warnings'):
                 const mentionedJidListWarnings = message.message.extendedTextMessage?.contextInfo?.mentionedJid || [];
@@ -787,7 +782,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 await sendUnavailable(sock, chatId, message, '.antigroup');
                 break;
             case userMessage.startsWith('.antispam') || userMessage.startsWith('.antikeyword') || userMessage.startsWith('.antiword') || userMessage.startsWith('.antiwords'):
-                await eddyCompat.unavailable(sock, chatId, message, commandName, 'Ye EDDY group automation command recognize ho gayi hai. Current bot me equivalent setup ke liye .schedule / moderation modules use karein.');
+                await eddyCompat.unavailable(sock, chatId, message, commandName, 'This EDDY group automation command is recognized. Use .schedule or the moderation modules for the equivalent setup in this bot.');
                 break;
             case userMessage.startsWith('.antichannel'):
                 if (!isGroup) {
@@ -1105,7 +1100,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 await lockedUsersCommand(sock, chatId, message);
                 break;
             case userMessage.startsWith('.setcmd') || userMessage.startsWith('.getcmd') || userMessage.startsWith('.delcmd'):
-                await eddyCompat.unavailable(sock, chatId, message, commandName, 'Sticker command mapping EDDY me database-based hai. Is bot me module port karne ke liye DB adapter chahiye.');
+                await eddyCompat.unavailable(sock, chatId, message, commandName, 'Sticker command mapping is database-based in EDDY. A database adapter is required to port that module into this bot.');
                 break;
             case userMessage === '.staff' || userMessage === '.admins' || userMessage === '.listadmin':
                 if (!isGroup) {
@@ -1309,7 +1304,7 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 await getProfilePictureCommand(sock, chatId, message, rawText);
                 break;
             case userMessage.startsWith('.wastalk') || userMessage.startsWith('.wastatus'):
-                await eddyCompat.unavailable(sock, chatId, message, commandName, 'WhatsApp stalk/status lookup ke liye EDDY ka separate module tha. Current bot me safe placeholder add kar diya gaya hai.');
+                await eddyCompat.unavailable(sock, chatId, message, commandName, 'EDDY used a separate module for WhatsApp stalk/status lookup. This bot currently includes a safe placeholder.');
                 break;
             case userMessage.startsWith('.ss') || userMessage.startsWith('.ssweb') || userMessage.startsWith('.screenshot'):
                 const ssCommandLength = userMessage.startsWith('.screenshot') ? 11 : (userMessage.startsWith('.ssweb') ? 6 : 3);
@@ -1339,10 +1334,10 @@ async function handleMessages(sock, messageUpdate, printLog) {
                 await eddyCompat.wallpaper(sock, chatId, message, rawText);
                 break;
             case userMessage.startsWith('.gen'):
-                await eddyCompat.unavailable(sock, chatId, message, '.gen', 'CC generator ko safety ki wajah se enable nahi kiya. Main fake/financial credential generator add nahi kar sakta.');
+                await eddyCompat.unavailable(sock, chatId, message, '.gen', 'The CC generator is disabled for safety. I cannot add fake or financial credential generators.');
                 break;
             case userMessage.startsWith('.broadcast') || userMessage.startsWith('.bc'):
-                await eddyCompat.unavailable(sock, chatId, message, commandName, 'Broadcast command recognize ho gayi hai; current bot me mass-message module configure nahi hai.');
+                await eddyCompat.unavailable(sock, chatId, message, commandName, 'Broadcast command is recognized, but the mass-message module is not configured in this bot.');
                 break;
             case userMessage.startsWith('.addowner') || userMessage.startsWith('.removeowner') || userMessage.startsWith('.restart') || userMessage.startsWith('.afk') || userMessage.startsWith('.pnotify') || userMessage.startsWith('.dnotify') || userMessage.startsWith('.restrict') || userMessage.startsWith('.unrestrict') || userMessage.startsWith('.siminfo') || userMessage.startsWith('.cnicinfo'):
                 await eddyCompat.unavailable(sock, chatId, message, commandName);

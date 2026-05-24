@@ -136,7 +136,7 @@ async function handleLinkDetection(sock, chatId, message, userMessage, senderId)
 `${ICON.warn} *${style.toSmallCaps('antilink warning')}*
 
 ${ICON.user} ${mention(senderId)}
-${ICON.stop} ${style.toSmallCaps('links allowed nahi hain')}
+${ICON.stop} ${style.toSmallCaps('links are not allowed')}
 ${ICON.warn} *${style.toSmallCaps('action')}:* ${style.toSmallCaps(cfg.action || 'delete')}`,
             mentions: [senderId]
         }, { quoted: message });

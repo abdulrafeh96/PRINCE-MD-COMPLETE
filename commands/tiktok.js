@@ -135,7 +135,7 @@ module.exports = async function tiktokCommand(sock, chatId, message) {
     if (!rawArg) {
         await sock.sendMessage(chatId, {
             text:
-`❌ *${toSmallCaps('tiktok username ya link do')}*
+`❌ *${toSmallCaps('please provide a tiktok username or link')}*
 
 ${toSmallCaps('profile details')}: \`.ttstalk tiktok\`
 ${toSmallCaps('video download')}: \`.tiktok <link>\``
@@ -152,7 +152,7 @@ ${toSmallCaps('video download')}: \`.tiktok <link>\``
         } catch (err) {
             await react(sock, message, '❌');
             await sock.sendMessage(chatId, {
-                text: `❌ *${toSmallCaps('tiktok profile not found')}*\n_${err.message || 'username check karo'}_`
+                text: `❌ *${toSmallCaps('tiktok profile not found')}*\n_${err.message || 'check the username'}_`
             }, { quoted: message });
         }
         return;

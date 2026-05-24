@@ -7,7 +7,7 @@ async function aiCommand(sock, chatId, message) {
         
         if (!text) {
             return await sock.sendMessage(chatId, { 
-                text: "❌ *Question do!*\nUsage: `.gpt write a basic html code`"
+                text: "❌ *Please provide a question!*\nUsage: `.gpt write a basic html code`"
             }, {
                 quoted: message
             });
@@ -20,7 +20,7 @@ async function aiCommand(sock, chatId, message) {
 
         if (!query) {
             return await sock.sendMessage(chatId, { 
-                text: "❌ *Question do!*\nUsage: `.gpt write a basic html code`"
+                text: "❌ *Please provide a question!*\nUsage: `.gpt write a basic html code`"
             }, {quoted:message});
         }
 
@@ -79,7 +79,7 @@ async function aiCommand(sock, chatId, message) {
         } catch (error) {
             console.error('API Error:', error);
             await sock.sendMessage(chatId, {
-                text: "❌ *AI response failed!*\n_Thori dair baad dobara try karo._",
+                text: "❌ *AI response failed!*\n_Please try again later._",
                 contextInfo: {
                     mentionedJid: [message.key.participant || message.key.remoteJid],
                     quotedMessage: message.message
@@ -91,7 +91,7 @@ async function aiCommand(sock, chatId, message) {
     } catch (error) {
         console.error('AI Command Error:', error);
         await sock.sendMessage(chatId, {
-            text: "❌ *AI command error!*\n_Thori dair baad dobara try karo._",
+            text: "❌ *AI command error!*\n_Please try again later._",
             contextInfo: {
                 mentionedJid: [message.key.participant || message.key.remoteJid],
                 quotedMessage: message.message

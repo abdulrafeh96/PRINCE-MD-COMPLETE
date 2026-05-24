@@ -25,7 +25,7 @@ async function resolveSpotifyQuery(input) {
 module.exports = async function spotifyCommand(sock, chatId, message) {
     const query = getArgs(message);
     if (!query) {
-        await sock.sendMessage(chatId, { text: '❌ *Spotify song/link do!*\nUsage: `.spotify <song name or spotify link>`' }, { quoted: message });
+        await sock.sendMessage(chatId, { text: '❌ *Please provide a Spotify song or link!*\nUsage: `.spotify <song name or spotify link>`' }, { quoted: message });
         return;
     }
 
@@ -34,7 +34,7 @@ module.exports = async function spotifyCommand(sock, chatId, message) {
         await songCommand(sock, chatId, withText(message, `.song ${resolved}`));
     } catch (err) {
         await sock.sendMessage(chatId, {
-            text: '❌ *Spotify resolve failed!*\n_Song name likh kar try karo: `.spotify faded alan walker`_'
+            text: '❌ *Spotify resolve failed!*\n_Try again with a song name: `.spotify faded alan walker`_'
         }, { quoted: message });
     }
 };

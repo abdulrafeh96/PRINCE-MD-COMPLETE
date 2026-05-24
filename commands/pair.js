@@ -5,7 +5,7 @@ async function pairCommand(sock, chatId, message, q) {
     try {
         if (!q) {
             return await sock.sendMessage(chatId, {
-                text: "❌ *Valid WhatsApp number do!*\nUsage: `.pair 91702395XXXX`"
+                text: "❌ *Please provide a valid WhatsApp number!*\nUsage: `.pair 91702395XXXX`"
             });
         }
 
@@ -25,7 +25,7 @@ async function pairCommand(sock, chatId, message, q) {
 
             if (!result[0]?.exists) {
                 return await sock.sendMessage(chatId, {
-                    text: `❌ *Ye number WhatsApp par registered nahi hai!*`
+                    text: `❌ *This number is not registered on WhatsApp!*`
                 });
             }
 
@@ -52,8 +52,8 @@ async function pairCommand(sock, chatId, message, q) {
             } catch (apiError) {
                 console.error('API Error:', apiError);
                 const errorMessage = apiError.message === 'Service Unavailable' 
-                    ? "❌ *Service abhi unavailable hai!*"
-                    : "❌ *Pairing code generate nahi ho saka!*";
+                    ? "❌ *Service is currently unavailable!*"
+                    : "❌ *Could not generate the pairing code!*";
                 
                 await sock.sendMessage(chatId, {
                     text: errorMessage

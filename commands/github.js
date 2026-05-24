@@ -9,7 +9,7 @@ module.exports = async function githubCommand(sock, chatId, message) {
 
     if (!username) {
         await sock.sendMessage(chatId, {
-            text: '❌ *GitHub username do!*\nUsage: `.github torvalds`'
+            text: '❌ *Please provide a GitHub username!*\nUsage: `.github torvalds`'
         }, { quoted: message });
         return;
     }
@@ -38,7 +38,7 @@ module.exports = async function githubCommand(sock, chatId, message) {
         await sock.sendMessage(chatId, { text }, { quoted: message });
     } catch (err) {
         await sock.sendMessage(chatId, {
-            text: '❌ *GitHub profile nahi mila!*\n_Username check karo aur dobara try karo._'
+            text: '❌ *GitHub profile not found!*\n_Check the username and try again._'
         }, { quoted: message });
     }
 };

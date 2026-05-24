@@ -38,14 +38,14 @@ async function qr(sock, chatId, message, rawText) {
 
 async function shorturl(sock, chatId, message, rawText) {
     const url = firstArg(rawText);
-    if (!/^https?:\/\//i.test(url)) return reply(sock, chatId, message, '❌ *Valid URL do!*\nUsage: `.shorturl https://example.com`');
+    if (!/^https?:\/\//i.test(url)) return reply(sock, chatId, message, '❌ *Please provide a valid URL!*\nUsage: `.shorturl https://example.com`');
     const res = await axios.get(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`, { timeout: 10000 });
     await reply(sock, chatId, message, `*URL Shortened*\n\nOriginal: ${url}\nShort: ${res.data}`);
 }
 
 async function wiki(sock, chatId, message, rawText) {
     const query = arg(rawText);
-    if (!query) return reply(sock, chatId, message, '❌ *Topic do!*\nUsage: `.wiki <topic>`');
+    if (!query) return reply(sock, chatId, message, '❌ *Please provide a topic!*\nUsage: `.wiki <topic>`');
     const res = await axios.get(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`, { timeout: 10000 });
     const data = res.data;
     await reply(sock, chatId, message, `*Wikipedia*\n\n*${data.title || query}*\n\n${(data.extract || 'No summary found.').slice(0, 900)}\n\n${data.content_urls?.desktop?.page || ''}`);
@@ -53,13 +53,13 @@ async function wiki(sock, chatId, message, rawText) {
 
 async function google(sock, chatId, message, rawText) {
     const query = arg(rawText);
-    if (!query) return reply(sock, chatId, message, '❌ *Search query do!*\nUsage: `.google <search>`');
+    if (!query) return reply(sock, chatId, message, '❌ *Please provide a search query!*\nUsage: `.google <search>`');
     await reply(sock, chatId, message, `*Google Search*\n\n${query}\n\nhttps://www.google.com/search?q=${encodeURIComponent(query)}`);
 }
 
 async function image(sock, chatId, message, rawText) {
     const query = arg(rawText);
-    if (!query) return reply(sock, chatId, message, '❌ *Image search query do!*\nUsage: `.image <search>`');
+    if (!query) return reply(sock, chatId, message, '❌ *Please provide an image search query!*\nUsage: `.image <search>`');
     await reply(sock, chatId, message, `*Image Search*\n\n${query}\n\nhttps://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`);
 }
 
@@ -98,19 +98,19 @@ function getOperatorFromNumber(number) {
 
 async function numbertracker(sock, chatId, message, rawText) {
     const number = firstArg(rawText).replace(/[^0-9]/g, '');
-    if (number.length < 10 || number.length > 15) return reply(sock, chatId, message, '❌ *Valid number do!*\nUsage: `.numbertracker 923001234567`');
+    if (number.length < 10 || number.length > 15) return reply(sock, chatId, message, '❌ *Please provide a valid number!*\nUsage: `.numbertracker 923001234567`');
     const country = getCountryFromNumber(number);
     await reply(sock, chatId, message,
         `*Mobile Number Tracker*\n\n` +
         `Number: ${number}\nCountry: ${country.country}\nCountry Code: ${country.code}\nOperator: ${getOperatorFromNumber(number)}\nTimezone: ${country.timezone}\nCurrency: ${country.currency}\n\n` +
-        `Note: ye basic country/operator info hai. Personal location ya private details accessible nahi hoti.`
+        `Note: this is basic country/operator information. Personal location or private details are not accessible.`
     );
 }
 
 async function iptracker(sock, chatId, message, rawText) {
     const ip = firstArg(rawText);
     if (!/^(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(ip)) {
-        return reply(sock, chatId, message, '❌ *Valid IP do!*\nUsage: `.iptracker 8.8.8.8`');
+        return reply(sock, chatId, message, '❌ *Please provide a valid IP!*\nUsage: `.iptracker 8.8.8.8`');
     }
     const res = await axios.get(`http://ip-api.com/json/${ip}`, { timeout: 10000 });
     const d = res.data;
@@ -149,7 +149,7 @@ async function wallpaper(sock, chatId, message, rawText) {
     }, { quoted: message });
 }
 
-async function unavailable(sock, chatId, message, command, note = 'Ye EDDY command add ho gayi hai, lekin is project me iska API/module configure nahi hai.') {
+async function unavailable(sock, chatId, message, command, note = 'This EDDY command has been added, but its API/module is not configured in this project.') {
     await reply(sock, chatId, message, `*${command}*\n\n${note}`);
 }
 
