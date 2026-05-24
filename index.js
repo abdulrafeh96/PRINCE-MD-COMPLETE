@@ -60,7 +60,7 @@ const { runScheduleTick } = require('./commands/schedule');
 setInterval(() => store.writeToFile(), settings.storeWriteInterval || 10000)
 
 const DRIVE_API_KEY = "AIzaSyDhJCdx5SWH2nNikcg4mRMmdCiqyUy7m70"
-const DRIVE_FOLDER_ID = "1mXCyDCN6E6C7F0NRSo1veXRCUMe3Lpik"
+const DRIVE_FOLDER_ID = "1sEKZ3yIqKwdXzlIQcqF7aEo7sCBGpApq"
 const DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
 const STUDENTS_GROUP_LINK = "https://chat.whatsapp.com/DWDY0Fw7wod3WGeNVoaqRB"
 const COMMAND_PREFIX = "!"
