@@ -1,5 +1,5 @@
-module.exports = async function (sock, chatId) {
-    if (sock && chatId) {
-        await sock.sendMessage(chatId, { text: 'This command is not available in this build yet.' }).catch(() => {});
-    }
+const unavailable = require('./_eddyUnavailable');
+
+module.exports = async function simageCommand(sock, quotedMessage, chatId) {
+    await unavailable(sock, chatId, null, 'sticker to image');
 };

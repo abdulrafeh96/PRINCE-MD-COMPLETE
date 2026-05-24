@@ -1,9 +1,22 @@
-const noop = async function (sock, chatId) {
-    if (sock && chatId) {
-        await sock.sendMessage(chatId, { text: 'This command is not available in this build yet.' }).catch(() => {});
-    }
-};
+const { toSmallCaps } = require('../lib/eddyStyle');
 
 module.exports = {
-    goodnightCommand: noop
+    goodnightCommand: async function (sock, chatId, message) {
+        const text =
+`🌙✨ *${toSmallCaps('good night')}*
+
+**بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْم** 🌙🤍
+
+**اَلَا بِذِكْرِ اللّٰهِ تَطْمَئِنُّ الْقُلُوْبُ**
+*“Indeed, in the remembrance of Allah do hearts find peace.”* 🤍✨
+— *(Surah Ar-Ra’d 13:28)*
+
+**اللّٰهُمَّ بِاسْمِكَ أَمُوتُ وَأَحْيَا** 🌌💫
+
+**اَللّٰهُمَّ احْفَظْنَا طُوْلَ اللَّيْلِ وَارْزُقْنَا نَوْمًا هَادِئًا وَقَلْبًا مُطْمَئِنًّا** 🤲🏻🌷
+
+⋆｡‧˚ʚɞ˚‧｡⋆🌙⭐☁️🕊️`;
+
+        await sock.sendMessage(chatId, { text }, { quoted: message });
+    }
 };

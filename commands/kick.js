@@ -1,4 +1,5 @@
 const isAdmin = require('../lib/isAdmin');
+const style = require('../lib/eddyStyle');
 
 async function kickCommand(sock, chatId, senderId, mentionedJids, message) {
     const isOwner = message.key.fromMe;
@@ -6,12 +7,12 @@ async function kickCommand(sock, chatId, senderId, mentionedJids, message) {
         const { isSenderAdmin, isBotAdmin } = await isAdmin(sock, chatId, senderId);
 
         if (!isBotAdmin) {
-            await sock.sendMessage(chatId, { text: 'Please make the bot an admin first.' }, { quoted: message });
+            await sock.sendMessage(chatId, { text: style.fail('please make the bot an admin first') }, { quoted: message });
             return;
         }
 
         if (!isSenderAdmin) {
-            await sock.sendMessage(chatId, { text: 'Only group admins can use the kick command.' }, { quoted: message });
+            await sock.sendMessage(chatId, { text: style.fail('only group admins can use the kick command') }, { quoted: message });
             return;
         }
     }
@@ -27,7 +28,7 @@ async function kickCommand(sock, chatId, senderId, mentionedJids, message) {
     
     if (usersToKick.length === 0) {
         await sock.sendMessage(chatId, { 
-            text: 'Please mention the user or reply to their message to kick!'
+            text: `❌ *${style.toSmallCaps('tag reply or provide a number to kick')}!*`
         }, { quoted: message });
         return;
     }
@@ -103,7 +104,7 @@ async function kickCommand(sock, chatId, senderId, mentionedJids, message) {
 
     if (isTryingToKickBot) {
         await sock.sendMessage(chatId, { 
-            text: "I can't kick myself🤖"
+            text: `❌ *${style.toSmallCaps("i can't kick myself")}*\n${style.toSmallCaps('you can try on yourself')} 😄`
         }, { quoted: message });
         return;
     }
@@ -116,13 +117,13 @@ async function kickCommand(sock, chatId, senderId, mentionedJids, message) {
         }));
         
         await sock.sendMessage(chatId, { 
-            text: `${usernames.join(', ')} has been kicked successfully!`,
+            text: `✅ ${usernames.join(', ')} *${style.toSmallCaps('kicked successfully')}*`,
             mentions: usersToKick
         });
     } catch (error) {
         console.error('Error in kick command:', error);
         await sock.sendMessage(chatId, { 
-            text: 'Failed to kick user(s)!'
+            text: `❌ *${style.toSmallCaps('failed to kick make sure i am admin')}*`
         });
     }
 }

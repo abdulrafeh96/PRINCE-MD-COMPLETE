@@ -1,167 +1,236 @@
-const settings = require('../settings');
 const fs = require('fs');
 const path = require('path');
+const settings = require('../settings');
+const { toSmallCaps } = require('../lib/eddyStyle');
 
-function readJsonSafe(filePath, fallback) {
-    try {
-        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    } catch (_) {
-        return fallback;
-    }
+function getKarachiDateParts() {
+    const now = new Date();
+    return {
+        time: now.toLocaleTimeString('en-PK', {
+            timeZone: 'Asia/Karachi',
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        }).toLowerCase(),
+        date: now.toLocaleDateString('en-GB', {
+            timeZone: 'Asia/Karachi',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        })
+    };
 }
 
-function formatUptime(seconds) {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-
-    const parts = [];
-    if (days) parts.push(`${days}d`);
-    if (hours) parts.push(`${hours}h`);
-    if (minutes) parts.push(`${minutes}m`);
-    if (secs || parts.length === 0) parts.push(`${secs}s`);
-    return parts.join(' ');
+function sc(text) {
+    return toSmallCaps(text);
 }
 
 async function helpCommand(sock, chatId, message) {
-    const modeData = readJsonSafe('./data/messageCount.json', { isPublic: true });
-    const groupData = readJsonSafe('./data/userGroupData.json', {});
-    const isGroup = chatId.endsWith('@g.us');
-    const groupId = isGroup ? chatId : null;
-    const uptime = formatUptime(process.uptime());
-    const statusText = sock?.user?.id ? 'Online' : 'Starting';
-    const enabledFeatures = [];
+    const botName = settings.botName || 'Prince Md';
+    const userName = message.pushName || message.verifiedBizName || 'User';
+    const mode = settings.commandMode || 'public';
+    const { time, date } = getKarachiDateParts();
 
-    if (groupId && groupData.antilink?.[groupId]?.enabled) enabledFeatures.push('Antilink');
-    if (groupId && groupData.antitag?.[groupId]?.enabled) enabledFeatures.push('Antitag');
-    if (groupId && groupData.antisticker?.[groupId]?.enabled) enabledFeatures.push('Antisticker');
-    if (groupId && groupData.antichannel?.[groupId]?.enabled) enabledFeatures.push('Antichannel');
-    if (groupId && groupData.antibadword?.[groupId]?.enabled) enabledFeatures.push('Antibadword');
-    if (groupId && groupData.welcome?.[groupId]?.enabled) enabledFeatures.push('Welcome');
-    if (groupId && groupData.goodbye?.[groupId]?.enabled) enabledFeatures.push('Goodbye');
-    if (groupId && groupData.chatbot?.[groupId]?.enabled) enabledFeatures.push('Chatbot');
+    const menu = `╭━━〔𓆩 ${sc(botName)} 𓆪〕━━⬣
+┃✮╭────────────────
+┃✮│ ${sc('bot name')} : *${sc(botName)}*
+┃✮│ ${sc('user')} : *${sc(userName)}*
+┃✮│ ${sc('dev')} : *${sc(settings.botOwner || 'Abdul Rafeh')}*
+┃✮│ ${sc('mode')} : *${sc(mode)}*
+┃✮│ ${sc('prefix')} : *[ . ]*
+┃✮│ ${sc('time')} : *${sc(time)}*
+┃✮│ ${sc('date')} : *${sc(date)}*
+┃✮╰────────────────
+╰━━━━━━━━━━━━━━⬣
+          ${sc('hey')} *${sc(userName)}*
+  𓆩 ${sc(botName)} 𓆪 ${sc('at your service')}
 
-    const helpMessage = `
-╔════════════════════════════╗
-   ${settings.botName || 'Prince 2.0'}
-   Control Menu
-   Version: ${settings.version || '3.0.0'}
-╚════════════════════════════╝
+*┏━━〔 💠 𝐌𝐀𝐈𝐍 〕*
+┃ ❍ .ᴍᴇɴᴜ
+┃ ❍ .ᴘɪɴɢ
+┃ ❍ .ᴀʟɪᴠᴇ
+┃ ❍ .ɪɴꜰᴏ
+┃ ❍ .ᴜᴘᴛɪᴍᴇ
+┃ ❍ .ꜱᴘᴇᴇᴅ
+┃ ❍ .ᴏᴡɴᴇʀ
+┃ ❍ .ᴘᴀɪʀ
+┗━━━━━━━━━━━━┛
 
-[ SYSTEM ]
-• Name: ${settings.botName || 'Prince 2.0'}
-• Status: ${statusText}
-• Uptime: ${uptime}
-• Mode: ${modeData.isPublic ? 'Public' : 'Private'}
-• Owner: ${settings.botOwner || 'Owner'}
+*┏━━〔 👥 𝐆𝐑𝐎𝐔𝐏 〕*
+┃ ❍ .ᴋɪᴄᴋ
+┃ ❍ .ᴀᴅᴅ
+┃ ❍ .ᴘʀᴏᴍᴏᴛᴇ
+┃ ❍ .ᴅᴇᴍᴏᴛᴇ
+┃ ❍ .ᴍᴜᴛᴇ
+┃ ❍ .ᴜɴᴍᴜᴛᴇ
+┃ ❍ .ᴛᴀɢᴀʟʟ
+┃ ❍ .ʜɪᴅᴇᴛᴀɢ
+┃ ❍ .ɢʀᴏᴜᴘɪɴꜰᴏ
+┃ ❍ .ꜱᴇᴛɴᴀᴍᴇ
+┃ ❍ .ꜱᴇᴛᴅᴇꜱᴄ
+┃ ❍ .ꜱᴇᴛᴘᴘɢᴄ
+┃ ❍ .ʟɪɴᴋɢᴄ
+┃ ❍ .ʀᴇᴠᴏᴋᴇɢᴄ
+┃ ❍ .ᴀɴᴛɪʟɪɴᴋ
+┃ ❍ .ᴀɴᴛɪꜱᴛɪᴄᴋᴇʀ
+┃ ❍ .ᴀɴᴛɪɢʀᴏᴜᴘ
+┃ ❍ .ᴀᴜᴛᴏᴏᴘᴇɴ 09:00
+┃ ❍ .ᴀᴜᴛᴏᴄʟᴏꜱᴇ 22:00
+┃ ❍ .ᴀᴜᴛᴏꜱᴛᴀᴛᴜꜱ
+┃ ❍ .ꜱᴄʜᴇᴅᴜʟᴇ ꜱᴛᴀᴛᴜꜱ
+┃ ❍ .ɢʀᴏᴜᴘꜱᴛᴀᴛᴜꜱ
+┃ ❍ .ᴡᴀʀɴ
+┃ ❍ .ʀᴇꜱᴇᴛᴡᴀʀɴ
+┃ ❍ .ᴡᴇʟᴄᴏᴍᴇ
+┃ ❍ .ʟᴏᴄᴋᴄʜᴀᴛ
+┃ ❍ .ᴜɴʟᴏᴄᴋᴄʜᴀᴛ
+┃ ❍ .ʟᴏᴄᴋᴇᴅᴜꜱᴇʀꜱ
+┗━━━━━━━━━━━━┛
 
-[ FEATURES ]
-• Group Security
-• Files / Handouts
-• Downloads
-• AI Tools
-• Admin Controls
-• Auto Settings
-${enabledFeatures.length ? `• Enabled Here: ${enabledFeatures.join(', ')}` : '• Enabled Here: None'}
+*┏━━〔 🤖 𝐀𝐈 𝐓𝐎𝐎𝐋𝐒 〕*
+┃ ❍ .ᴡᴏʀᴍɢᴘᴛ / .ᴡɢᴘᴛ
+┃ ❍ .ᴄᴜʀꜱᴏʀᴀɪ / .ᴄᴜʀꜱᴏʀ
+┃ ❍ .ᴄʟᴀᴜᴅᴇ
+┃ ❍ .ɢʀᴏᴋ
+┃ ❍ .ᴅᴇᴠɪɴ
+┃ ❍ .ᴡɪɴᴅꜱᴜʀꜰ
+┃ ❍ .ᴄᴏᴅᴇx
+┃ ❍ .ɢᴘᴛ5.4
+┃ ❍ .ʙᴏʟᴛ
+┃ ❍ .ᴋɪʀᴏ
+┃ ❍ .ʙʙᴄ
+┃ ❍ .ᴄʜᴀᴛʙᴏᴛᴅᴍ
+┃ ❍ .ᴄʜᴀᴛʙᴏᴛɢᴄ
+┃ ❍ .ᴄʜᴀᴛɢᴘᴛ / .ɢᴘᴛ
+┃ ❍ .ᴀɪɪᴍᴀɢᴇ / .ᴀɪɪᴍɢ / .ᴅᴀʟʟᴇ
+┗━━━━━━━━━━━━┛
 
-[ GENERAL ]
-• .help
-• .ping
-• .alive
-• .owner
-• .quote
-• .news
-• .attp <text>
-• .groupinfo
-• .url
-• .ss <link>
-• .translate <text>
+*┏━━〔 📥 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃 〕*
+┃ ❍ .ᴘʟᴀʏ
+┃ ❍ .ᴠɪᴅᴇᴏ
+┃ ❍ .ꜱᴏɴɢ
+┃ ❍ .ɢɪꜰ
+┃ ❍ .ᴛᴏᴍᴘ3
+┃ ❍ .ʏᴛᴍᴘ3
+┃ ❍ .ʏᴛᴍᴘ4
+┃ ❍ .ᴛɪᴋᴛᴏᴋ
+┃ ❍ .ɪɴꜱᴛᴀɢʀᴀᴍ
+┃ ❍ .ꜰᴀᴄᴇʙᴏᴏᴋ
+┃ ❍ .ᴘɪɴᴛᴇʀᴇꜱᴛ
+┃ ❍ .ᴘɪɴ
+┃ ❍ .ᴘɪɴᴅʟ
+┃ ❍ .ᴘɪɴᴛᴇʀᴇꜱᴛᴅʟ
+┗━━━━━━━━━━━━┛
 
-[ GROUP / ADMIN ]
-• .ban @user
-• .unban @user
-• .promote @user
-• .demote @user
-• .mute <minutes>
-• .unmute
-• .kick @user
-• .warn @user
-• .warnings @user
-• .delete
-• .clear
-• .tag <text>
-• .tagall
-• .tagnotadmin
-• .hidetag <text>
-• .antilink
-• .antitag <on/off>
-• .antisticker <on/off>
-• .antichannel <on/off>
-• .antibadword
-• .welcome <on/off>
-• .goodbye <on/off>
-• .resetlink
-• .setgdesc <text>
-• .setgname <text>
-• .setgpp
+*┏━━〔 🎓 𝐄𝐃𝐔𝐂𝐀𝐓𝐈𝐎𝐍𝐀𝐋 〕*
+┃ ❍ ᴄs101 ᴍɪᴅ ꜰɪʟᴇꜱ
+┃ ❍ ᴄs101 ꜰɪɴᴀʟ ꜰɪʟᴇꜱ
+┃ ❍ ᴄs101 ʜᴀɴᴅᴏᴜᴛꜱ
+┃ ❍ ᴄs101 ʜɪɢʜʟɪɢʜᴛᴇᴅ ʜᴀɴᴅᴏᴜᴛꜱ
+┃ ❍ !ᴍᴏʀᴇ ꜰɪʟᴇꜱ ᴍɪᴅ ᴄs101
+┃ ❍ !ᴍᴏʀᴇ ꜰɪʟᴇꜱ ꜰɪɴᴀʟ ᴄs101
+┗━━━━━━━━━━━━┛
 
-[ OWNER ]
-• .mode <public/private>
-• .autostatus <on/off>
-• .autotyping <on/off>
-• .autoread <on/off>
-• .anticall <on/off>
-• .pmblocker <on/off/status>
-• .pmblocker setmsg <text>
-• .antidelete
-• .cleartmp
-• .clearsession
-• .setpp
-• .settings
-• .sudo
-• .update
+*┏━━〔 ⚙️ 𝐔𝐓𝐈𝐋𝐈𝐓𝐘 〕*
+┃ ❍ .ᴡᴇᴀᴛʜᴇʀ
+┃ ❍ .ᴛʀᴀɴꜱʟᴀᴛᴇ
+┃ ❍ .ᴄᴀʟᴄ
+┃ ❍ .ǫʀ
+┃ ❍ .ɢᴏᴏɢʟᴇ
+┃ ❍ .ᴡᴇʙ
+┃ ❍ .ᴊɪᴅ
+┃ ❍ .ᴛᴛꜱ
+┃ ❍ .ꜱʜᴏʀᴛᴜʀʟ
+┃ ❍ .ʀᴇᴠᴇʀꜱᴇ
+┃ ❍ .ꜰᴀɴᴄʏ
+┃ ❍ .ᴠɪᴇᴡᴏɴᴄᴇ
+┃ ❍ .ʀᴇᴀᴄᴛ
+┃ ❍ .ᴛᴏᴛᴀʟᴄʜᴀᴛ
+┃ ❍ .ᴡᴀꜱᴛᴀʟᴋ
+┃ ❍ .ɢᴇᴛᴘᴘ
+┃ ❍ .ᴡᴀꜱᴛᴀᴛᴜꜱ
+┗━━━━━━━━━━━━┛
 
-[ MEDIA / DOWNLOAD ]
-• .play <query>
-• .song <query>
-• .tiktok <link>
-• .video <query or link>
-• .take <packname>
-• .emojimix <emoji1>+<emoji2>
-• .viewonce
+*┏━━〔 🔒 𝐒𝐄𝐂𝐔𝐑𝐈𝐓𝐘 & 𝐏𝐑𝐈𝐕𝐀𝐂𝐘 〕*
+┃ ❍ .ɴᴜᴍʙᴇʀᴛʀᴀᴄᴋᴇʀ
+┃ ❍ .ɴᴜᴍᴛʀᴀᴄᴋ
+┃ ❍ .ɪᴘᴛʀᴀᴄᴋᴇʀ
+┃ ❍ .ɪᴘᴛʀᴀᴄᴋ
+┃ ❍ .ꜰᴀᴋᴇɴᴜᴍʙᴇʀ
+┃ ❍ .ꜰᴀᴋᴇɴᴜᴍ
+┃ ❍ .ᴄʜᴇᴄᴋɴᴜᴍʙᴇʀ
+┃ ❍ .ᴄʜᴇᴄᴋɴᴜᴍ
+┃ ❍ .ᴏᴛᴘ
+┃ ❍ .ᴏᴛᴘꜱᴛᴀᴛᴜꜱ
+┗━━━━━━━━━━━━┛
 
-[ AI / UTILITY ]
-• .ai <prompt>
-• .anime
-• .character
-• .chatbot
-• .compliment @user
-• .ping
-• .alive
-• .pair
+*┏━━〔 🎮 𝐅𝐔𝐍 & 𝐆𝐀𝐌𝐄𝐒 〕*
+┃ ❍ .ᴊᴏᴋᴇ
+┃ ❍ .ǫᴜᴏᴛᴇ
+┃ ❍ .ꜰᴀᴄᴛ
+┃ ❍ .8ʙᴀʟʟ
+┃ ❍ .ᴅᴀʀᴇ
+┃ ❍ .ᴛʀᴜᴛʜ
+┃ ❍ .ꜱʜɪᴘ
+┃ ❍ .ʀᴀᴛᴇ
+┃ ❍ .ᴛɪᴄ
+┃ ❍ .ᴅᴀᴜɢʜᴛᴇʀ / .ʙᴇᴛɪ
+┃ ❍ .ᴡɪꜰᴇ
+┃ ❍ .ꜱᴏɴ / .ʙᴇᴛᴀ
+┃ ❍ .ʜᴀɴɢᴍᴀɴ
+┗━━━━━━━━━━━━┛
 
-[ FILES / HANDOUTS ]
-• Example: cs201 mid files
-• Example: mgt211 handouts
-`;
+*┏━━〔 🧩 𝐄𝐗𝐓𝐑𝐀 〕*
+┃ ❍ .ᴛᴏɪᴍɢ
+┃ ❍ .ꜱᴛɪᴄᴋᴇʀɪɴꜰᴏ
+┃ ❍ .ᴛᴡɪᴛᴛᴇʀ / .ᴛᴡ
+┃ ❍ .ᴛᴇʀᴀʙᴏx / .ᴛʙ
+┃ ❍ .ꜱꜱᴛᴀᴛᴜꜱ
+┃ ❍ .ᴡɪᴋɪ
+┃ ❍ .ꜱᴇᴀʀᴄʜ
+┃ ❍ .ɪᴍᴀɢᴇ / .ɪᴍɢ
+┃ ❍ .ᴡᴀʟʟᴘᴀᴘᴇʀ / .ᴡᴘ
+┃ ❍ .ʜᴅ
+┃ ❍ .ʀᴀɴᴋ
+┃ ❍ .ꜱᴇᴛᴄᴍᴅ
+┃ ❍ .ɢᴇᴛᴄᴍᴅ
+┃ ❍ .ᴅᴇʟᴄᴍᴅ
+┗━━━━━━━━━━━━┛
+
+*┏━━〔 ⚙️ 𝐎𝐖𝐍𝐄𝐑 〕*
+┃ ❍ .ᴍᴏᴅᴇ
+┃ ❍ .ᴀᴅᴅᴏᴡɴᴇʀ
+┃ ❍ .ʀᴇᴍᴏᴠᴇᴏᴡɴᴇʀ
+┃ ❍ .ᴀɴᴛɪᴅᴇʟᴇᴛᴇ
+┃ ❍ .ʙʀᴏᴀᴅᴄᴀꜱᴛ
+┃ ❍ .ʀᴇꜱᴛᴀʀᴛ
+┃ ❍ .ᴅᴇʟᴇᴛᴇ
+┃ ❍ .ɢᴇᴛᴘᴘ
+┃ ❍ .ᴀꜰᴋ
+┃ ❍ .ᴘɴᴏᴛɪꜰʏ
+┃ ❍ .ᴅɴᴏᴛɪꜰʏ
+┃ ❍ .ʀᴇꜱᴛʀɪᴄᴛ
+┃ ❍ .ᴜɴʀᴇꜱᴛʀɪᴄᴛ
+┃ ❍ .ꜱɪᴍɪɴꜰᴏ
+┃ ❍ .ᴄɴɪᴄɪɴꜰᴏ
+┗━━━━━━━━━━━━┛
+
+> ${sc('powered by')} ${sc(botName)}`;
 
     try {
         const imagePath = path.join(__dirname, '../assets/bot_image.jpg');
         if (fs.existsSync(imagePath)) {
-            const imageBuffer = fs.readFileSync(imagePath);
             await sock.sendMessage(chatId, {
-                image: imageBuffer,
-                caption: helpMessage
+                image: fs.readFileSync(imagePath),
+                caption: `𓆩 ${sc(botName)} 𓆪`
             }, { quoted: message });
-            return;
         }
     } catch (error) {
         console.error('Help image error:', error);
     }
 
-    await sock.sendMessage(chatId, { text: helpMessage }, { quoted: message });
+    await sock.sendMessage(chatId, { text: menu }, { quoted: message });
 }
 
 module.exports = helpCommand;
-

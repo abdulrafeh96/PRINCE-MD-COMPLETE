@@ -2,6 +2,7 @@ const isAdmin = require('../lib/isAdmin');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const fs = require('fs');
 const path = require('path');
+const style = require('../lib/eddyStyle');
 
 async function downloadMediaMessage(message, mediaType) {
     const stream = await downloadContentFromMessage(message, mediaType);
@@ -18,12 +19,12 @@ async function hideTagCommand(sock, chatId, senderId, messageText, replyMessage,
     const { isSenderAdmin, isBotAdmin } = await isAdmin(sock, chatId, senderId);
 
     if (!isBotAdmin) {
-        await sock.sendMessage(chatId, { text: 'Please make the bot an admin first.' }, { quoted: message });
+        await sock.sendMessage(chatId, { text: style.fail('please make the bot an admin first') }, { quoted: message });
         return;
     }
 
     if (!isSenderAdmin) {
-        await sock.sendMessage(chatId, { text: 'Only admins can use the .hidetag command.' }, { quoted: message });
+        await sock.sendMessage(chatId, { text: style.fail('only admins can use the .hidetag command') }, { quoted: message });
         return;
     }
 
@@ -50,10 +51,8 @@ async function hideTagCommand(sock, chatId, senderId, messageText, replyMessage,
             await sock.sendMessage(chatId, content);
         }
     } else {
-        await sock.sendMessage(chatId, { text: messageText || 'Tagged members (excluding admins).', mentions: nonAdmins });
+        await sock.sendMessage(chatId, { text: messageText || style.toSmallCaps('hidden tag notification'), mentions: nonAdmins });
     }
 }
 
 module.exports = hideTagCommand;
-
-

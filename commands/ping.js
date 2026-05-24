@@ -1,45 +1,31 @@
-const os = require('os');
-const settings = require('../settings.js');
-
-function formatTime(seconds) {
-    const days = Math.floor(seconds / (24 * 60 * 60));
-    seconds = seconds % (24 * 60 * 60);
-    const hours = Math.floor(seconds / (60 * 60));
-    seconds = seconds % (60 * 60);
-    const minutes = Math.floor(seconds / 60);
-    seconds = Math.floor(seconds % 60);
-
-    let time = '';
-    if (days > 0) time += `${days}d `;
-    if (hours > 0) time += `${hours}h `;
-    if (minutes > 0) time += `${minutes}m `;
-    if (seconds > 0 || time === '') time += `${seconds}s`;
-
-    return time.trim();
-}
+const settings = require('../settings');
+const { box, formatUptime, nowParts } = require('./princeStyle');
 
 async function pingCommand(sock, chatId, message) {
     try {
         const start = Date.now();
-        await sock.sendMessage(chatId, { text: 'Pong!' }, { quoted: message });
-        const end = Date.now();
-        const ping = Math.round((end - start) / 2);
+        const probe = await sock.sendMessage(chatId, { text: '𓆩 Prince Md 𓆪 ᴄʜᴇᴄᴋɪɴɢ...' }, { quoted: message });
+        const ping = Date.now() - start;
+        const { time, date } = nowParts();
 
-        const uptimeInSeconds = process.uptime();
-        const uptimeFormatted = formatTime(uptimeInSeconds);
+        const botInfo = box('💠 𝐁𝐎𝐓 𝐒𝐓𝐀𝐓𝐔𝐒', [
+            `ʙᴏᴛ ɴᴀᴍᴇ : *${settings.botName || 'Prince Md'}*`,
+            `ꜱᴛᴀᴛᴜꜱ : *ᴏɴʟɪɴᴇ*`,
+            `ᴘɪɴɢ : *${ping} ms*`,
+            `ᴜᴘᴛɪᴍᴇ : *${formatUptime(process.uptime())}*`,
+            `ᴠᴇʀꜱɪᴏɴ : *${settings.version || '3.0.7'}*`,
+            `ᴛɪᴍᴇ : *${time}*`,
+            `ᴅᴀᴛᴇ : *${date}*`
+        ]);
 
-        const botInfo = `*${settings.botName || 'Prince 2.0'} Status*\n` +
-            `• Ping: ${ping} ms\n` +
-            `• Uptime: ${uptimeFormatted}\n` +
-            `• Version: ${settings.version}\n` +
-            `• Status: Online`;
-
-        // Reply to the original message with the bot info
-        await sock.sendMessage(chatId, { text: botInfo},{ quoted: message });
-
+        if (probe?.key) {
+            await sock.sendMessage(chatId, { edit: probe.key, text: botInfo });
+        } else {
+            await sock.sendMessage(chatId, { text: botInfo }, { quoted: message });
+        }
     } catch (error) {
         console.error('Error in ping command:', error);
-        await sock.sendMessage(chatId, { text: '❌ Failed to get bot status.' });
+        await sock.sendMessage(chatId, { text: box('❌ 𝐄𝐑𝐑𝐎𝐑', ['ᴘɪɴɢ ᴄʜᴇᴄᴋ ꜰᴀɪʟᴇᴅ']) }, { quoted: message });
     }
 }
 

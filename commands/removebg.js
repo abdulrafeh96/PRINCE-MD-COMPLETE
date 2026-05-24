@@ -1,5 +1,12 @@
-module.exports = async function (sock, chatId) {
-    if (sock && chatId) {
-        await sock.sendMessage(chatId, { text: 'This command is not available in this build yet.' }).catch(() => {});
-    }
+const unavailable = require('./_eddyUnavailable');
+
+async function removebgCommand(sock, chatId, message) {
+    await unavailable(sock, chatId, message, 'remove background');
+}
+
+removebgCommand.exec = async function (sock, message) {
+    const chatId = message.key.remoteJid;
+    await unavailable(sock, chatId, message, 'remove background');
 };
+
+module.exports = removebgCommand;

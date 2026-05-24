@@ -1,4 +1,5 @@
 const fs = require('fs');
+const isOwnerOrSudo = require('../lib/isOwner');
 
 function readJsonSafe(path, fallback) {
     try {
@@ -9,13 +10,15 @@ function readJsonSafe(path, fallback) {
     }
 }
 
-const isOwnerOrSudo = require('../lib/isOwner');
+function status(value) {
+    return value ? 'ON' : 'OFF';
+}
 
 async function settingsCommand(sock, chatId, message) {
     try {
         const senderId = message.key.participant || message.key.remoteJid;
         const isOwner = await isOwnerOrSudo(senderId, sock, chatId);
-        
+
         if (!message.key.fromMe && !isOwner) {
             await sock.sendMessage(chatId, { text: 'Only bot owner can use this command!' }, { quoted: message });
             return;
@@ -31,64 +34,50 @@ async function settingsCommand(sock, chatId, message) {
         const pmblocker = readJsonSafe(`${dataDir}/pmblocker.json`, { enabled: false });
         const anticall = readJsonSafe(`${dataDir}/anticall.json`, { enabled: false });
         const userGroupData = readJsonSafe(`${dataDir}/userGroupData.json`, {
-            antilink: {}, antibadword: {}, welcome: {}, goodbye: {}, chatbot: {}, antitag: {}, antisticker: {}, antichannel: {}
+            antilink: {},
+            antibadword: {},
+            welcome: {},
+            chatbot: {},
+            antitag: {},
+            antisticker: {},
+            antichannel: {},
+            schedule: {}
         });
         const autoReaction = Boolean(userGroupData.autoReaction);
 
-        // Per-group features
         const groupId = isGroup ? chatId : null;
-        const antilinkOn = groupId ? Boolean(userGroupData.antilink && userGroupData.antilink[groupId]) : false;
-        const antibadwordOn = groupId ? Boolean(userGroupData.antibadword && userGroupData.antibadword[groupId]) : false;
-        const welcomeOn = groupId ? Boolean(userGroupData.welcome && userGroupData.welcome[groupId]) : false;
-        const goodbyeOn = groupId ? Boolean(userGroupData.goodbye && userGroupData.goodbye[groupId]) : false;
-        const chatbotOn = groupId ? Boolean(userGroupData.chatbot && userGroupData.chatbot[groupId]) : false;
-        const antitagCfg = groupId ? (userGroupData.antitag && userGroupData.antitag[groupId]) : null;
-        const antistickerCfg = groupId ? (userGroupData.antisticker && userGroupData.antisticker[groupId]) : null;
-        const antichannelCfg = groupId ? (userGroupData.antichannel && userGroupData.antichannel[groupId]) : null;
+        const antilinkCfg = groupId ? userGroupData.antilink?.[groupId] : null;
+        const antibadwordCfg = groupId ? userGroupData.antibadword?.[groupId] : null;
+        const welcomeOn = groupId ? Boolean(userGroupData.welcome?.[groupId]) : false;
+        const chatbotOn = groupId ? Boolean(userGroupData.chatbot?.[groupId]) : false;
+        const antitagCfg = groupId ? userGroupData.antitag?.[groupId] : null;
+        const antistickerCfg = groupId ? userGroupData.antisticker?.[groupId] : null;
+        const antichannelCfg = groupId ? userGroupData.antichannel?.[groupId] : null;
+        const scheduleCfg = groupId ? userGroupData.schedule?.[groupId] : null;
 
-        const lines = [];
-        lines.push('*BOT SETTINGS*');
-        lines.push('');
-        lines.push(`• Mode: ${mode.isPublic ? 'Public' : 'Private'}`);
-        lines.push(`• Auto Status: ${autoStatus.enabled ? 'ON' : 'OFF'}`);
-        lines.push(`• Autoread: ${autoread.enabled ? 'ON' : 'OFF'}`);
-        lines.push(`• Autotyping: ${autotyping.enabled ? 'ON' : 'OFF'}`);
-        lines.push(`• PM Blocker: ${pmblocker.enabled ? 'ON' : 'OFF'}`);
-        lines.push(`• Anticall: ${anticall.enabled ? 'ON' : 'OFF'}`);
-        lines.push(`• Auto Reaction: ${autoReaction ? 'ON' : 'OFF'}`);
+        const lines = [
+            '*BOT SETTINGS*',
+            '',
+            `• Mode: ${mode.isPublic ? 'Public' : 'Private'}`,
+            `• Auto Status: ${status(autoStatus.enabled)}`,
+            `• Autoread: ${status(autoread.enabled)}`,
+            `• Autotyping: ${status(autotyping.enabled)}`,
+            `• PM Blocker: ${status(pmblocker.enabled)}`,
+            `• Anticall: ${status(anticall.enabled)}`,
+            `• Auto Reaction: ${status(autoReaction)}`
+        ];
+
         if (groupId) {
             lines.push('');
             lines.push(`Group: ${groupId}`);
-            if (antilinkOn) {
-                const al = userGroupData.antilink[groupId];
-                lines.push(`• Antilink: ON (action: ${al.action || 'delete'})`);
-            } else {
-                lines.push('• Antilink: OFF');
-            }
-            if (antibadwordOn) {
-                const ab = userGroupData.antibadword[groupId];
-                lines.push(`• Antibadword: ON (action: ${ab.action || 'delete'})`);
-            } else {
-                lines.push('• Antibadword: OFF');
-            }
-            lines.push(`• Welcome: ${welcomeOn ? 'ON' : 'OFF'}`);
-            lines.push(`• Goodbye: ${goodbyeOn ? 'ON' : 'OFF'}`);
-            lines.push(`• Chatbot: ${chatbotOn ? 'ON' : 'OFF'}`);
-            if (antitagCfg && antitagCfg.enabled) {
-                lines.push(`• Antitag: ON (action: ${antitagCfg.action || 'delete'})`);
-            } else {
-                lines.push('• Antitag: OFF');
-            }
-            if (antistickerCfg && antistickerCfg.enabled) {
-                lines.push(`â€¢ Antisticker: ON (action: ${antistickerCfg.action || 'delete'})`);
-            } else {
-                lines.push('â€¢ Antisticker: OFF');
-            }
-            if (antichannelCfg && antichannelCfg.enabled) {
-                lines.push(`â€¢ Antichannel: ON (action: ${antichannelCfg.action || 'delete'})`);
-            } else {
-                lines.push('â€¢ Antichannel: OFF');
-            }
+            lines.push(antilinkCfg ? `• Antilink: ON (action: ${antilinkCfg.action || 'delete'})` : '• Antilink: OFF');
+            lines.push(antibadwordCfg ? `• Antibadword: ON (action: ${antibadwordCfg.action || 'delete'})` : '• Antibadword: OFF');
+            lines.push(`• Welcome: ${status(welcomeOn)}`);
+            lines.push(`• Chatbot: ${status(chatbotOn)}`);
+            lines.push(antitagCfg?.enabled ? `• Antitag: ON (action: ${antitagCfg.action || 'delete'})` : '• Antitag: OFF');
+            lines.push(antistickerCfg?.enabled ? `• Antisticker: ON (action: ${antistickerCfg.action || 'delete'})` : '• Antisticker: OFF');
+            lines.push(antichannelCfg?.enabled ? `• Antichannel: ON (action: ${antichannelCfg.action || 'delete'})` : '• Antichannel: OFF');
+            lines.push(scheduleCfg?.enabled ? `• Schedule: ON (open: ${scheduleCfg.openTime || 'not set'}, close: ${scheduleCfg.closeTime || 'not set'})` : '• Schedule: OFF');
         } else {
             lines.push('');
             lines.push('Note: Per-group settings will be shown when used inside a group.');

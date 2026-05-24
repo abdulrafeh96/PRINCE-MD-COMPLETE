@@ -20,7 +20,7 @@ async function sudoCommand(sock, chatId, message) {
     const sub = (args[0] || '').toLowerCase();
 
     if (!sub || !['add', 'del', 'remove', 'list'].includes(sub)) {
-        await sock.sendMessage(chatId, { text: 'Usage:\n.sudo add <@user|number>\n.sudo del <@user|number>\n.sudo list' },{quoted :message});
+        await sock.sendMessage(chatId, { text: '👑 *Sudo Menu*\n\n`.sudo add <@user|number>`\n`.sudo del <@user|number>`\n`.sudo list`' },{quoted :message});
         return;
     }
 
@@ -65,5 +65,4 @@ async function sudoCommand(sock, chatId, message) {
 }
 
 module.exports = sudoCommand;
-
 

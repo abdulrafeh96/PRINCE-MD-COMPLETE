@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Prince 2.0 - A WhatsApp Bot
  * Copyright (c) 2024 Professor
  * 
@@ -48,6 +48,7 @@ const { parsePhoneNumber } = require("libphonenumber-js")
 const { PHONENUMBER_MCC } = require('@whiskeysockets/baileys/lib/Utils/generics')
 const { rmSync, existsSync } = require('fs')
 const { join } = require('path')
+const style = require('./lib/eddyStyle')
 
 // Import lightweight store
 const store = require('./lib/lightweight_store')
@@ -55,11 +56,16 @@ const store = require('./lib/lightweight_store')
 // Initialize store
 store.readFromFile()
 const settings = require('./settings')
+const { runScheduleTick } = require('./commands/schedule');
 setInterval(() => store.writeToFile(), settings.storeWriteInterval || 10000)
 
 const DRIVE_API_KEY = "AIzaSyDhJCdx5SWH2nNikcg4mRMmdCiqyUy7m70"
 const DRIVE_FOLDER_ID = "1mXCyDCN6E6C7F0NRSo1veXRCUMe3Lpik"
 const DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
+const STUDENTS_GROUP_LINK = "https://chat.whatsapp.com/DWDY0Fw7wod3WGeNVoaqRB"
+const COMMAND_PREFIX = "!"
+const FILES_PER_SUBJECT_LIMIT = 3
+const FILE_SEND_DELAY_MS = 2000
 const TERM_FILES_DEBUG = true
 
 const drive = google.drive({
@@ -67,9 +73,27 @@ const drive = google.drive({
     auth: DRIVE_API_KEY
 })
 const recentFileRequests = new Map()
+const termFileMoreOffsets = new Map()
 let currentSocket = null
 let reconnectTimer = null
 let isStarting = false
+let scheduleInterval = null
+
+function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function ensureScheduleRunner() {
+    if (scheduleInterval) return
+    scheduleInterval = setInterval(async () => {
+        if (!currentSocket) return
+        try {
+            await runScheduleTick(currentSocket)
+        } catch (error) {
+            console.error('Schedule runner error:', error)
+        }
+    }, 30000)
+}
 
 function scheduleReconnect(reason) {
     if (reconnectTimer || isStarting) return
@@ -89,6 +113,86 @@ function debugTermFiles(...args) {
     console.log("[TERM_FILES_DEBUG]", ...args)
 }
 
+function toBotSmallCaps(text = "") {
+    const map = {
+        a: "\u1D00",
+        b: "\u0299",
+        c: "\u1D04",
+        d: "\u1D05",
+        e: "\u1D07",
+        f: "\uA730",
+        g: "\u0262",
+        h: "\u029C",
+        i: "\u026A",
+        j: "\u1D0A",
+        k: "\u1D0B",
+        l: "\u029F",
+        m: "\u1D0D",
+        n: "\u0274",
+        o: "\u1D0F",
+        p: "\u1D18",
+        q: "q",
+        r: "\u0280",
+        s: "s",
+        t: "\u1D1B",
+        u: "\u1D1C",
+        v: "\u1D20",
+        w: "\u1D21",
+        x: "x",
+        y: "\u028F",
+        z: "\u1D22"
+    }
+
+    const placeholders = []
+    const protectedText = String(text || "").replace(/https?:\/\/\S+|chat\.whatsapp\.com\/\S+/gi, (match) => {
+        const token = `__URL_${placeholders.length}__`
+        placeholders.push(match)
+        return token
+    })
+
+    const converted = protectedText
+        .split("")
+        .map((char) => map[char.toLowerCase()] || char)
+        .join("")
+
+    return placeholders.reduce((output, value, index) => output.replace(`__URL_${index}__`, value), converted)
+}
+
+function shouldEddyWrap(text = "") {
+    const value = String(text).trim()
+    if (!value || value.length > 220) return false
+    if (/https?:\/\/|chat\.whatsapp\.com|\n.*\n.*\n/s.test(value)) return false
+    if (/^(\*|_|`|>|\u3014|\u256d|\u2705|\u274c|\u26a0\ufe0f|\u2728|\ud83d\udd13|\ud83d\udd12|\u23f0|\ud83c\udf19|\u2600\ufe0f)/u.test(value)) return false
+    return /^(please|only|this command|failed|invalid|usage|no |not |sorry|error|an error|bot |group |the group|auto-|pm blocker|anticall|warning|successfully|added|removed|deleted|profile|sticker|channel|link)/i.test(value)
+}
+
+function toEddyOutgoingText(text = "") {
+    const value = String(text)
+    const small = toBotSmallCaps(value)
+    if (!shouldEddyWrap(value)) return small
+
+    if (/^(failed|error|an error|invalid|only|this command|sorry|bot must|please make)/i.test(value)) {
+        return `\u274c *${small}*`
+    }
+    if (/^(please|usage|no |not |warning)/i.test(value)) {
+        return `\u26a0\ufe0f *${small}*`
+    }
+    return `\u2705 *${small}*`
+}
+function enableSmallCapsMessages(sock) {
+    if (!sock || sock.__smallCapsMessagesEnabled) return
+    const originalSendMessage = sock.sendMessage.bind(sock)
+    sock.sendMessage = async (jid, content = {}, options = {}) => {
+        if (content && typeof content === "object") {
+            content = { ...content }
+            if (typeof content.text === "string") content.text = toBotSmallCaps(content.text)
+            if (typeof content.caption === "string") content.caption = toBotSmallCaps(content.caption)
+        }
+        return originalSendMessage(jid, content, options)
+    }
+    sock.__smallCapsMessagesEnabled = true
+}
+
 function escapeDriveQueryValue(value = "") {
     return String(value).replace(/\\/g, "\\\\").replace(/'/g, "\\'")
 }
@@ -106,6 +210,28 @@ function getSubjectCodes(text = "") {
     return [...new Set(matches.map((match) => match.toUpperCase()))]
 }
 
+function buildMoreFilesCommand(termType, subject) {
+    return `${COMMAND_PREFIX}more files ${termType} ${subject}`
+}
+
+function getTermFilesOffsetKey(sender, termType, subject) {
+    return `${sender}|${termType}|${subject}`
+}
+
+function buildMoreFilesHints(moreSubjects = [], termType) {
+    if (moreSubjects.length === 0) return []
+
+    return [
+        "",
+        "More files chahiye hon to ye command bhejo:",
+        ...moreSubjects.map((subject) => `➡️ ${buildMoreFilesCommand(termType, subject)}`)
+    ]
+}
+
+function isMoreFilesRequest(text = "") {
+    return new RegExp(`^\\s*\\${COMMAND_PREFIX}?\\s*more\\s+files\\b`, "i").test(text)
+}
+
 function detectTermType(text = "") {
     const normalized = normalizeLookupText(text)
     if (/\b(mid(?: term)?|mid-term|midterm)\b/.test(normalized)) return "mid"
@@ -117,6 +243,109 @@ function getTermFolderKeywords(termType) {
     if (termType === "mid") return ["mid term", "midterm", "mid-term", "mid terms"]
     if (termType === "final") return ["final term", "finalterm", "final-term", "final terms"]
     return []
+}
+
+function buildSupportFooter() {
+    return [
+        "━━━━━━━━━━━━━━",
+        "Students Support Group",
+        STUDENTS_GROUP_LINK
+    ].join("\n")
+}
+
+function buildDeliveryReport({ type, subject, totalSent, moreSubjects = [], termType }) {
+    return [
+        "╭─〔 *DELIVERY REPORT* 〕",
+        "",
+        "✅  Status: *Delivered*",
+        `📂  Type: *${type}*`,
+        `📚  Subject: *${subject}*`,
+        `📦  Total Sent: *${totalSent}*`,
+        "",
+        "Files pohanch gayi ne, paaji.",
+        "Check kar lo, sab ready hai.",
+        ...buildMoreFilesHints(moreSubjects, termType),
+        "",
+        "╰────────────────",
+        buildSupportFooter()
+    ].join("\n")
+}
+
+function buildFileStatusReport({ type, subject }) {
+    return [
+        "╭─〔 *FILE STATUS* 〕",
+        "",
+        "⛔  Status: *Not Available*",
+        `📂  Type: *${type}*`,
+        `📚  Subject: *${subject}*`,
+        "",
+        "File abhi Drive mein upload nahi hui.",
+        "Jaldi add ho jaye gi, thora sabar karo.",
+        "",
+        "╰────────────────",
+        buildSupportFooter()
+    ].join("\n")
+}
+
+function buildHandoutsReport({ subject, totalSent }) {
+    return [
+        "╭─〔 *HANDOUTS DELIVERED* 〕",
+        "",
+        "✅  Status: *Delivered*",
+        `📘  Subject: *${subject}*`,
+        `📦  Handouts Sent: *${totalSent}*`,
+        "",
+        "Handouts pohanch gaye ne, paaji.",
+        "Parhai shuru karo, scene set hai.",
+        "",
+        "╰────────────────",
+        buildSupportFooter()
+    ].join("\n")
+}
+
+function buildNoMoreFilesReport({ type, subject }) {
+    return [
+        "╭─〔 *FILE STATUS* 〕",
+        "",
+        "✅  Status: *Completed*",
+        `📂  Type: *${type}*`,
+        `📚  Subject: *${subject}*`,
+        "",
+        "Is subject ki aur files available nahi hain.",
+        "Jo files thi woh send ho chuki hain.",
+        "",
+        "╰────────────────",
+        buildSupportFooter()
+    ].join("\n")
+}
+
+function buildMoreFilesNeedDetailsReport() {
+    return [
+        "╭─〔 *MORE FILES* 〕",
+        "",
+        "Command mein term aur subject bhi likho.",
+        "",
+        `Example: *${buildMoreFilesCommand("mid", "CS101")}*`,
+        `Example: *${buildMoreFilesCommand("final", "CS101")}*`,
+        "",
+        "╰────────────────",
+        buildSupportFooter()
+    ].join("\n")
+}
+
+function buildHandoutsStatusReport({ subject }) {
+    return [
+        "╭─〔 *HANDOUTS STATUS* 〕",
+        "",
+        "⛔  Status: *Not Available*",
+        `📘  Subject: *${subject}*`,
+        "",
+        "Handouts abhi Drive mein upload nahi hue.",
+        "Jaldi add ho jaye ge, thora sabar karo.",
+        "",
+        "╰────────────────",
+        buildSupportFooter()
+    ].join("\n")
 }
 
 async function listDriveChildren(parentId, queryParts = []) {
@@ -227,7 +456,8 @@ async function handleFilesAndHandouts(sock, mek) {
         const subjectCodes = getSubjectCodes(lowerText)
         const termType = detectTermType(lowerText)
         const wantsHandouts = /\b(handouts?|highlight(?:ed|s)?\s*handouts?|bookan|kitaaban|kitaban)\b/i.test(textWithoutUrls)
-        const wantsFiles = /\b(files?|send)\b/i.test(lowerText)
+        const wantsMoreFiles = isMoreFilesRequest(lowerText)
+        const wantsFiles = !wantsHandouts && (wantsMoreFiles || /\b(files?|send)\b/i.test(lowerText))
         const looksLikeBotAvailabilityReply =
             /^\s*[a-z]{2,4}\d{3}\s+ke handouts abhi available nahi hain\.?\s*$/i.test(text) ||
             /^\s*[a-z]{2,4}\d{3}\s+(mid term|final term)\s+material abhi available nahi hai\.?\s*$/i.test(text)
@@ -256,53 +486,160 @@ async function handleFilesAndHandouts(sock, mek) {
             termType,
             subjectCodes,
             wantsFiles,
-            wantsHandouts
+            wantsHandouts,
+            wantsMoreFiles
         })
 
-        if (termType && subjectCodes.length > 0 && wantsFiles) {
-            for (const subject of subjectCodes) {
-                const files = await findTermSubjectFiles(termType, subject)
-                if (files.length > 0) {
-                    await sock.sendMessage(sender, {
-                        text: buildMaterialReplyCard("files", subject, true)
-                    }, { quoted: mek })
+        if (wantsMoreFiles && (!termType || subjectCodes.length === 0)) {
+            await sock.sendMessage(sender, {
+                text: buildMoreFilesNeedDetailsReport()
+            }, { quoted: mek })
+            return true
+        }
 
-                    for (const file of files) {
+        if (termType && subjectCodes.length > 0 && wantsFiles) {
+            let totalSent = 0
+            let foundAnyFile = false
+            const unavailableSubjects = []
+            const moreSubjects = []
+            const reportType = `${termType === "mid" ? "Mid Term" : "Final Term"} Files`
+
+            for (const subject of subjectCodes) {
+                console.log("Searching term files:", termType, subject)
+                const files = await findTermSubjectFiles(termType, subject)
+                console.log("Term files result:", files)
+                debugTermFiles("termRequestResult", {
+                    sender,
+                    termType,
+                    subject,
+                    fileCount: files.length
+                })
+
+                if (files.length > 0) {
+                    const offsetKey = getTermFilesOffsetKey(sender, termType, subject)
+                    const startIndex = wantsMoreFiles ? (termFileMoreOffsets.get(offsetKey) || 0) : 0
+                    const filesToSend = files.slice(startIndex, startIndex + FILES_PER_SUBJECT_LIMIT)
+                    const nextIndex = startIndex + filesToSend.length
+
+                    if (filesToSend.length === 0) {
+                        unavailableSubjects.push(subject)
+                        termFileMoreOffsets.delete(offsetKey)
+                        continue
+                    }
+
+                    foundAnyFile = true
+                    if (nextIndex < files.length) {
+                        termFileMoreOffsets.set(offsetKey, nextIndex)
+                        moreSubjects.push(subject)
+                    } else {
+                        termFileMoreOffsets.delete(offsetKey)
+                    }
+
+                    for (const file of filesToSend) {
                         const downloadUrl = `https://drive.google.com/uc?export=download&id=${file.id}`
-                        await sock.sendMessage(sender, {
-                            document: { url: downloadUrl },
-                            mimetype: file.mimeType || "application/octet-stream",
-                            fileName: file.name
-                        }, { quoted: mek })
+                        try {
+                            await sock.sendMessage(sender, {
+                                document: { url: downloadUrl },
+                                mimetype: file.mimeType || "application/octet-stream",
+                                fileName: file.name
+                            }, { quoted: mek })
+                            totalSent += 1
+                            await wait(FILE_SEND_DELAY_MS)
+                            debugTermFiles("sendFile:success", {
+                                sender,
+                                termType,
+                                subject,
+                                fileId: file.id,
+                                fileName: file.name
+                            })
+                        } catch (sendErr) {
+                            debugTermFiles("sendFile:error", {
+                                sender,
+                                termType,
+                                subject,
+                                fileId: file.id,
+                                fileName: file.name,
+                                error: sendErr?.message || sendErr
+                            })
+                            unavailableSubjects.push(subject)
+                        }
                     }
                 } else {
-                    await sock.sendMessage(sender, {
-                        text: buildMaterialReplyCard("files", subject, false)
-                    }, { quoted: mek })
+                    debugTermFiles("termRequest:notFound", {
+                        sender,
+                        termType,
+                        subject
+                    })
+                    unavailableSubjects.push(subject)
                 }
+            }
+
+            const subjectLabel = subjectCodes.join(", ")
+            if (foundAnyFile && totalSent > 0) {
+                await sock.sendMessage(sender, {
+                    text: buildDeliveryReport({
+                        type: reportType,
+                        subject: subjectLabel,
+                        totalSent,
+                        moreSubjects,
+                        termType
+                    })
+                }, { quoted: mek })
+            } else {
+                await sock.sendMessage(sender, {
+                    text: wantsMoreFiles
+                        ? buildNoMoreFilesReport({
+                            type: reportType,
+                            subject: unavailableSubjects.join(", ") || subjectLabel
+                        })
+                        : buildFileStatusReport({
+                            type: reportType,
+                            subject: unavailableSubjects.join(", ") || subjectLabel
+                        })
+                }, { quoted: mek })
             }
             return true
         }
 
         if (wantsHandouts && subjectCodes.length > 0) {
-            for (const subject of subjectCodes) {
-                const file = await findHandouts(subject)
-                if (file?.id) {
-                    await sock.sendMessage(sender, {
-                        text: buildMaterialReplyCard("handouts", subject, true)
-                    }, { quoted: mek })
+            let totalSent = 0
+            let foundAnyFile = false
+            const unavailableSubjects = []
 
+            for (const subject of subjectCodes) {
+                console.log("Searching handout:", subject)
+                const file = await findHandouts(subject)
+                console.log("Result:", file)
+
+                if (file?.id) {
+                    foundAnyFile = true
                     const downloadUrl = `https://drive.google.com/uc?export=download&id=${file.id}`
                     await sock.sendMessage(sender, {
                         document: { url: downloadUrl },
                         mimetype: file.mimeType || "application/octet-stream",
                         fileName: file.name
                     }, { quoted: mek })
+                    totalSent += 1
+                    await wait(FILE_SEND_DELAY_MS)
                 } else {
-                    await sock.sendMessage(sender, {
-                        text: buildMaterialReplyCard("handouts", subject, false)
-                    }, { quoted: mek })
+                    unavailableSubjects.push(subject)
                 }
+            }
+
+            const subjectLabel = subjectCodes.join(", ")
+            if (foundAnyFile && totalSent > 0) {
+                await sock.sendMessage(sender, {
+                    text: buildHandoutsReport({
+                        subject: subjectLabel,
+                        totalSent
+                    })
+                }, { quoted: mek })
+            } else {
+                await sock.sendMessage(sender, {
+                    text: buildHandoutsStatusReport({
+                        subject: unavailableSubjects.join(", ") || subjectLabel
+                    })
+                }, { quoted: mek })
             }
             return true
         }
@@ -312,7 +649,7 @@ async function handleFilesAndHandouts(sock, mek) {
         console.log("File Request Error:", err?.message || err)
         if (mek.key?.remoteJid) {
             await sock.sendMessage(mek.key.remoteJid, {
-                text: "Files ya handouts fetch karte waqt error aa gaya. Baad me dobara try karein."
+                text: "⚠️ Oops! Something went wrong while fetching your files. Please try again later."
             }, { quoted: mek }).catch(() => {})
         }
         return true
@@ -333,7 +670,7 @@ async function showQrImage(qrText) {
 
 // Memory optimization - Force garbage collection if available
 setInterval(() => {
-    if (global.gc) {
+if (global.gc) {
         global.gc()
         console.log('🧹 Garbage collection completed')
     }
@@ -399,6 +736,8 @@ async function startXeonBotInc() {
             keepAliveIntervalMs: 10000,
         })
         currentSocket = XeonBotInc
+        enableSmallCapsMessages(XeonBotInc)
+        ensureScheduleRunner()
 
         // Save credentials when they update
         XeonBotInc.ev.on('creds.update', saveCreds)
@@ -439,16 +778,7 @@ async function startXeonBotInc() {
                 // Only try to send error message if we have a valid chatId
                 if (mek.key && mek.key.remoteJid) {
                     await XeonBotInc.sendMessage(mek.key.remoteJid, {
-                        text: '❌ An error occurred while processing your message.',
-                        contextInfo: {
-                            forwardingScore: 1,
-                            isForwarded: true,
-                            forwardedNewsletterMessageInfo: {
-                                newsletterJid: '120363161513685998@newsletter',
-                                newsletterName: 'Prince 2.0',
-                                serverMessageId: -1
-                            }
-                        }
+                        text: '❌ An error occurred while processing your message.'
                     }).catch(console.error);
                 }
             }
@@ -545,7 +875,7 @@ async function startXeonBotInc() {
         
         if (connection == "open") {
             console.log(chalk.magenta(` `))
-            console.log(chalk.yellow(`🌿Connected to => ` + JSON.stringify(XeonBotInc.user, null, 2)))
+            console.log(chalk.yellow(`🌿 Connected to => ` + JSON.stringify(XeonBotInc.user, null, 2)))
 
             try {
                 const botNumber = XeonBotInc.user.id.split(':')[0] + '@s.whatsapp.net';
@@ -553,16 +883,7 @@ async function startXeonBotInc() {
                     text: `Bot Connected Successfully!
 
 Time: 
-Status: Online and Ready!`, 
-                    contextInfo: {
-                        forwardingScore: 1,
-                        isForwarded: true,
-                        forwardedNewsletterMessageInfo: {
-                            newsletterJid: '120363161513685998@newsletter',
-                            newsletterName: 'Prince 2.0',
-                            serverMessageId: -1
-                        }
-                    }
+Status: Online and Ready!`
                 });
             } catch (error) {
                 console.error('Error sending connection message:', error.message)
@@ -704,5 +1025,6 @@ fs.watchFile(file, () => {
     delete require.cache[file]
     require(file)
 })
+
 
 

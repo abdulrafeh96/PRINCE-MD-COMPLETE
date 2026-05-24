@@ -1,6 +1,8 @@
 const { handleWelcome } = require('../lib/welcome');
 const { isWelcomeOn, getWelcome } = require('../lib/index');
 const fetch = require('node-fetch');
+const settings = require('../settings');
+const { box, nowParts } = require('./princeStyle');
 
 async function welcomeCommand(sock, chatId, message) {
     if (!chatId.endsWith('@g.us')) {
@@ -37,12 +39,24 @@ async function handleJoinEvent(sock, id, participants) {
                 hour12: true
             });
 
-            const finalMessage = customMessage
+            const customFinalMessage = customMessage
                 ? customMessage
                     .replace(/{user}/g, `@${user}`)
                     .replace(/{group}/g, groupName)
                     .replace(/{description}/g, groupDesc)
-                : `Welcome @${user} to *${groupName}*!\n\nMember count: ${groupMetadata.participants.length}\nTime: ${timeString}\n\nGroup description:\n${groupDesc}`;
+                : '';
+            const { time, date } = nowParts();
+            const finalMessage = customFinalMessage || `╭━━〔 *WELCOME* 〕━━╮
+┃ *Assalam-o-Alaikum* @${user}
+┃
+┃ *Welcome to ${groupName}*
+┃
+┃ This is a study group, so feel free to ask questions,
+┃ share useful notes, and learn together.
+╰━━━━━━━━━━━━╯
+
+📚 *Study Reminder*
+Stay respectful, avoid spam, and keep the discussion helpful for everyone.`;
 
             try {
                 let profilePicUrl = 'https://img.pyrocdn.com/dbKUgahg.png';

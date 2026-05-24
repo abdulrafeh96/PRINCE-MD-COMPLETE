@@ -1,9 +1,7 @@
-const noop = async function (sock, chatId) {
-    if (sock && chatId) {
-        await sock.sendMessage(chatId, { text: 'This command is not available in this build yet.' }).catch(() => {});
-    }
-};
-
 module.exports = {
-    rosedayCommand: noop
+    rosedayCommand: async function (sock, chatId, message) {
+        await sock.sendMessage(chatId, {
+            text: '🌹 *Happy Rose Day!*\n\nMay your day bloom with love, smiles, and soft little moments.'
+        }, { quoted: message });
+    }
 };

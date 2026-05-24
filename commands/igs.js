@@ -1,9 +1,5 @@
-const noop = async function (sock, chatId) {
-    if (sock && chatId) {
-        await sock.sendMessage(chatId, { text: 'This command is not available in this build yet.' }).catch(() => {});
-    }
-};
+const unavailable = require('./_eddyUnavailable');
 
 module.exports = {
-    igsCommand: noop
+    igsCommand: async (sock, chatId, message) => unavailable(sock, chatId, message, 'instagram story')
 };

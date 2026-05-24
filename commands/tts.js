@@ -4,7 +4,7 @@ const path = require('path');
 
 async function ttsCommand(sock, chatId, text, message, language = 'en') {
     if (!text) {
-        await sock.sendMessage(chatId, { text: 'Please provide the text for TTS conversion.' });
+        await sock.sendMessage(chatId, { text: '❌ *Provide text!*\nUsage: `.tts Hello world`' }, { quoted: message });
         return;
     }
 
@@ -14,7 +14,7 @@ async function ttsCommand(sock, chatId, text, message, language = 'en') {
     const gtts = new gTTS(text, language);
     gtts.save(filePath, async function (err) {
         if (err) {
-            await sock.sendMessage(chatId, { text: 'Error generating TTS audio.' });
+            await sock.sendMessage(chatId, { text: '❌ *TTS failed!*\n_Try a shorter text._' }, { quoted: message });
             return;
         }
 

@@ -1,10 +1,6 @@
-const noop = async function (sock, chatId) {
-    if (sock && chatId) {
-        await sock.sendMessage(chatId, { text: 'This command is not available in this build yet.' }).catch(() => {});
-    }
-};
+const unavailable = require('./_eddyUnavailable');
 
 module.exports = {
-    tictactoeCommand: noop,
-    handleTicTacToeMove: noop
+    tictactoeCommand: async (sock, chatId, senderId, text, message) => unavailable(sock, chatId, message, 'tic tac toe'),
+    handleTicTacToeMove: async (sock, chatId, senderId, text, message) => unavailable(sock, chatId, message, 'tic tac toe move')
 };

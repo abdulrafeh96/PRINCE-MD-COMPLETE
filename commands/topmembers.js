@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { toSmallCaps } = require('../lib/eddyStyle');
 
 const dataFilePath = path.join(__dirname, '..', 'data', 'messageCount.json');
 
@@ -27,13 +28,12 @@ function incrementMessageCount(groupId, userId) {
     }
 
     messageCounts[groupId][userId] += 1;
-
     saveMessageCounts(messageCounts);
 }
 
 function topMembers(sock, chatId, isGroup) {
     if (!isGroup) {
-        sock.sendMessage(chatId, { text: 'This command is only available in group chats.' });
+        sock.sendMessage(chatId, { text: toSmallCaps('this command is only available in group chats.') });
         return;
     }
 
@@ -42,19 +42,22 @@ function topMembers(sock, chatId, isGroup) {
 
     const sortedMembers = Object.entries(groupCounts)
         .sort(([, a], [, b]) => b - a)
-        .slice(0, 5); // Get top 5 members
+        .slice(0, 5);
 
     if (sortedMembers.length === 0) {
-        sock.sendMessage(chatId, { text: 'No message activity recorded yet.' });
+        sock.sendMessage(chatId, { text: toSmallCaps('no message activity recorded yet.') });
         return;
     }
 
-    let message = '🏆 Top Members Based on Message Count:\n\n';
+    let message = `🏆 ${toSmallCaps('top members based on message count')}:\n\n`;
     sortedMembers.forEach(([userId, count], index) => {
-        message += `${index + 1}. @${userId.split('@')[0]} - ${count} messages\n`;
+        message += `${index + 1}. @${userId.split('@')[0]} - ${count} ${toSmallCaps('messages')}\n`;
     });
 
-    sock.sendMessage(chatId, { text: message, mentions: sortedMembers.map(([userId]) => userId) });
+    sock.sendMessage(chatId, {
+        text: message,
+        mentions: sortedMembers.map(([userId]) => userId)
+    });
 }
 
 module.exports = { incrementMessageCount, topMembers };

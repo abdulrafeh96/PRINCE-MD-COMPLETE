@@ -1,18 +1,11 @@
 const fs = require('fs');
 const path = require('path');
+const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const isOwnerOrSudo = require('../lib/isOwner');
+const settings = require('../settings');
 
-const channelInfo = {
-    contextInfo: {
-        forwardingScore: 1,
-        isForwarded: false,
-        forwardedNewsletterMessageInfo: {
-            newsletterJid: '120363161513685998@newsletter',
-            newsletterName: 'Prince 2.0',
-            serverMessageId: -1
-        }
-    }
-};
+const channelInfo = {};
+const sentStatusIds = new Set();
 
 // Path to store auto status configuration
 const configPath = path.join(__dirname, '../data/autoStatus.json');
@@ -128,6 +121,86 @@ function isStatusReactionEnabled() {
     }
 }
 
+function getOwnerJid(sock) {
+    const owner = String(settings.ownerNumber || '').replace(/\D/g, '');
+    if (owner) return `${owner}@s.whatsapp.net`;
+    return sock.user.id.split(':')[0] + '@s.whatsapp.net';
+}
+
+async function streamToBuffer(stream) {
+    const chunks = [];
+    for await (const chunk of stream) {
+        chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+}
+
+function getStatusText(msg) {
+    return msg.message?.conversation ||
+        msg.message?.extendedTextMessage?.text ||
+        msg.message?.imageMessage?.caption ||
+        msg.message?.videoMessage?.caption ||
+        '';
+}
+
+async function sendStatusToOwner(sock, msg) {
+    if (!msg?.key?.id || sentStatusIds.has(msg.key.id)) return;
+    sentStatusIds.add(msg.key.id);
+    setTimeout(() => sentStatusIds.delete(msg.key.id), 10 * 60 * 1000);
+
+    const ownerJid = getOwnerJid(sock);
+    const sender = msg.key.participant || msg.key.remoteJid;
+    const senderTag = sender ? `@${sender.split('@')[0]}` : 'unknown';
+    const text = getStatusText(msg);
+    const header =
+`Status Saver
+
+From: ${senderTag}
+${text ? `Caption: ${text}` : ''}`;
+
+    try {
+        if (msg.message?.imageMessage) {
+            const buffer = await streamToBuffer(await downloadContentFromMessage(msg.message.imageMessage, 'image'));
+            await sock.sendMessage(ownerJid, {
+                image: buffer,
+                caption: header,
+                mentions: sender ? [sender] : []
+            });
+            return;
+        }
+
+        if (msg.message?.videoMessage) {
+            const buffer = await streamToBuffer(await downloadContentFromMessage(msg.message.videoMessage, 'video'));
+            await sock.sendMessage(ownerJid, {
+                video: buffer,
+                caption: header,
+                mentions: sender ? [sender] : []
+            });
+            return;
+        }
+
+        if (msg.message?.audioMessage) {
+            const buffer = await streamToBuffer(await downloadContentFromMessage(msg.message.audioMessage, 'audio'));
+            await sock.sendMessage(ownerJid, {
+                audio: buffer,
+                mimetype: msg.message.audioMessage.mimetype || 'audio/mpeg',
+                ptt: !!msg.message.audioMessage.ptt
+            });
+            await sock.sendMessage(ownerJid, { text: header, mentions: sender ? [sender] : [] });
+            return;
+        }
+
+        if (text) {
+            await sock.sendMessage(ownerJid, {
+                text: header,
+                mentions: sender ? [sender] : []
+            });
+        }
+    } catch (error) {
+        console.error('Status saver DM error:', error.message || error);
+    }
+}
+
 // Function to react to status using proper method
 async function reactToStatus(sock, statusKey) {
     try {
@@ -177,10 +250,10 @@ async function handleStatusUpdate(sock, status) {
             if (msg.key && msg.key.remoteJid === 'status@broadcast') {
                 try {
                     await sock.readMessages([msg.key]);
-                    const sender = msg.key.participant || msg.key.remoteJid;
                     
                     // React to status if enabled
                     await reactToStatus(sock, msg.key);
+                    await sendStatusToOwner(sock, msg);
                     
                     // Removed success log - only keep errors
                 } catch (err) {
@@ -200,10 +273,10 @@ async function handleStatusUpdate(sock, status) {
         if (status.key && status.key.remoteJid === 'status@broadcast') {
             try {
                 await sock.readMessages([status.key]);
-                const sender = status.key.participant || status.key.remoteJid;
                 
                 // React to status if enabled
                 await reactToStatus(sock, status.key);
+                await sendStatusToOwner(sock, status);
                 
                 // Removed success log - only keep errors
             } catch (err) {
@@ -222,7 +295,6 @@ async function handleStatusUpdate(sock, status) {
         if (status.reaction && status.reaction.key.remoteJid === 'status@broadcast') {
             try {
                 await sock.readMessages([status.reaction.key]);
-                const sender = status.reaction.key.participant || status.reaction.key.remoteJid;
                 
                 // React to status if enabled
                 await reactToStatus(sock, status.reaction.key);

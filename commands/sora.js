@@ -1,5 +1,5 @@
-module.exports = async function (sock, chatId) {
-    if (sock && chatId) {
-        await sock.sendMessage(chatId, { text: 'This command is not available in this build yet.' }).catch(() => {});
-    }
+const unavailable = require('./_eddyUnavailable');
+
+module.exports = async function soraCommand(sock, chatId, message) {
+    await unavailable(sock, chatId, message, 'sora');
 };
